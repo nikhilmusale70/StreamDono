@@ -1,6 +1,3 @@
-// StreamDonations - Razorpay to Streamlabs Integration
-// PostgreSQL schema for Railway deployment
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,18 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-enum SubscriptionTier {
-  FREE
-  PRO
-  ENTERPRISE
-}
-
-enum DonationStatus {
-  CAPTURED
-  FAILED
-  REFUNDED
 }
 
 model User {
@@ -33,52 +18,63 @@ model User {
   subscriptionTier SubscriptionTier @default(FREE) @map("subscription_tier")
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
-
-  config   StreamerConfig?
-  donations Donation[]
+  donations        Donation[]
+  config           StreamerConfig?
 
   @@map("users")
 }
 
 model StreamerConfig {
-  id                    String   @id @default(cuid())
-  userId                String   @unique @map("user_id")
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  donateSlug            String   @unique @map("donate_slug") // Unique URL slug: /donate/[slug]
-  streamlabsToken       String?  @map("streamlabs_token") // Encrypted
-  minDonationAmount     Int      @default(10) @map("min_donation_amount") // INR
-  alertMessageTemplate  String   @default("{name} donated ₹{amount}") @map("alert_message_template")
-  isActive              Boolean  @default(true) @map("is_active")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(cuid())
+  userId               String   @unique @map("user_id")
+  donateSlug           String   @unique @map("donate_slug")
+  streamlabsToken      String?  @map("streamlabs_token")
+  minDonationAmount    Int      @default(10) @map("min_donation_amount")
+  alertMessageTemplate String   @default("{name} donated ₹{amount}") @map("alert_message_template")
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("streamer_config")
 }
 
 model OrderMapping {
-  id         String   @id @default(cuid())
-  orderId    String   @unique @map("order_id") // Razorpay order_id
-  userId     String   @map("user_id") // Streamer who receives donation
-  donorName  String?  @map("donor_name")
-  message    String?
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  orderId   String   @unique @map("order_id")
+  userId    String   @map("user_id")
+  donorName String?  @map("donor_name")
+  message   String?
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@map("order_mapping")
 }
 
 model Donation {
-  id                  String         @id @default(cuid())
-  userId              String         @map("user_id")
-  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  razorpayPaymentId   String         @unique @map("razorpay_payment_id")
-  donorName           String?        @map("donor_name")
-  donorEmail          String?        @map("donor_email")
-  amount              Int            // Paise (100 = ₹1)
-  currency            String         @default("INR")
-  message             String?
-  status              DonationStatus @default(CAPTURED)
-  alertSent           Boolean        @default(false) @map("alert_sent")
-  createdAt           DateTime       @default(now()) @map("created_at")
+  id                String         @id @default(cuid())
+  userId            String         @map("user_id")
+  razorpayPaymentId String         @unique @map("razorpay_payment_id")
+  donorName         String?        @map("donor_name")
+  donorEmail        String?        @map("donor_email")
+  amount            Int
+  currency          String         @default("INR")
+  message           String?
+  status            DonationStatus @default(CAPTURED)
+  alertSent         Boolean        @default(false) @map("alert_sent")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("donations")
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum DonationStatus {
+  CAPTURED
+  FAILED
+  REFUNDED
 }
