@@ -44,9 +44,8 @@ model StreamerConfig {
   id                    String   @id @default(cuid())
   userId                String   @unique @map("user_id")
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  donateSlug            String   @unique @map("donate_slug") // Unique URL slug: /donate/[slug]
   streamlabsToken       String?  @map("streamlabs_token") // Encrypted
-  razorpayLink          String   @map("razorpay_link")
-  webhookSecret         String?  @map("webhook_secret") // From Razorpay when user adds webhook
   minDonationAmount     Int      @default(10) @map("min_donation_amount") // INR
   alertMessageTemplate  String   @default("{name} donated ₹{amount}") @map("alert_message_template")
   isActive              Boolean  @default(true) @map("is_active")
@@ -54,6 +53,17 @@ model StreamerConfig {
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("streamer_config")
+}
+
+model OrderMapping {
+  id         String   @id @default(cuid())
+  orderId    String   @unique @map("order_id") // Razorpay order_id
+  userId     String   @map("user_id") // Streamer who receives donation
+  donorName  String?  @map("donor_name")
+  message    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("order_mapping")
 }
 
 model Donation {

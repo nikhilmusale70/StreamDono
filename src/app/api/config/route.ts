@@ -7,8 +7,7 @@ import { z } from "zod"
 
 const configSchema = z.object({
   streamlabsToken: z.string().optional(),
-  razorpayLink: z.string().min(1).optional(),
-  webhookSecret: z.string().optional(), // From Razorpay dashboard when user adds webhook
+  donateSlug: z.string().min(1).max(50).regex(/^[a-z0-9-_]+$/, "Use only lowercase letters, numbers, hyphens"),
   minDonationAmount: z.number().min(0).max(100000).optional(),
   alertMessageTemplate: z.string().max(500).optional(),
   isActive: z.boolean().optional(),
@@ -33,8 +32,7 @@ export async function GET() {
     config: {
       id: config.id,
       streamlabsTokenSet: !!config.streamlabsToken,
-      razorpayLink: config.razorpayLink,
-      webhookSecretSet: !!config.webhookSecret,
+      donateSlug: config.donateSlug,
       minDonationAmount: config.minDonationAmount,
       alertMessageTemplate: config.alertMessageTemplate,
       isActive: config.isActive,
@@ -56,16 +54,29 @@ export async function POST(req: Request) {
       where: { userId: session.user.id },
     })
 
-    const razorpayLink = data.razorpayLink ?? existing?.razorpayLink ?? ""
-    if (!razorpayLink) {
+    const donateSlug = (data.donateSlug ?? existing?.donateSlug ?? "").toLowerCase().trim()
+    if (!donateSlug) {
       return NextResponse.json(
-        { error: "Razorpay payment link is required" },
+        { error: "Donate page URL slug is required" },
+        { status: 400 }
+      )
+    }
+
+    const slugExists = await prisma.streamerConfig.findFirst({
+      where: {
+        donateSlug,
+        userId: { not: session.user.id },
+      },
+    })
+    if (slugExists) {
+      return NextResponse.json(
+        { error: "This URL slug is already taken" },
         { status: 400 }
       )
     }
 
     const updateData: Record<string, unknown> = {
-      razorpayLink,
+      donateSlug,
       minDonationAmount: data.minDonationAmount ?? existing?.minDonationAmount ?? 10,
       alertMessageTemplate: data.alertMessageTemplate ?? existing?.alertMessageTemplate ?? "{name} donated ₹{amount}",
       isActive: data.isActive ?? existing?.isActive ?? true,
@@ -77,30 +88,19 @@ export async function POST(req: Request) {
         : null
     }
 
-    if (data.webhookSecret !== undefined && data.webhookSecret) {
-      updateData.webhookSecret = data.webhookSecret
-    }
-
-    if (!existing) {
-      updateData.userId = session.user.id
-      updateData.webhookSecret = (updateData.webhookSecret as string) || null
-    }
-
     const config = await prisma.streamerConfig.upsert({
       where: { userId: session.user.id },
       create: {
         userId: session.user.id,
         streamlabsToken: updateData.streamlabsToken ? (updateData.streamlabsToken as string) : null,
-        razorpayLink: updateData.razorpayLink as string,
-        webhookSecret: (updateData.webhookSecret as string) || null,
+        donateSlug: updateData.donateSlug as string,
         minDonationAmount: updateData.minDonationAmount as number,
         alertMessageTemplate: updateData.alertMessageTemplate as string,
         isActive: updateData.isActive as boolean,
       },
       update: {
         ...(updateData.streamlabsToken !== undefined && { streamlabsToken: (updateData.streamlabsToken as string) || null }),
-        ...(updateData.razorpayLink !== undefined && { razorpayLink: updateData.razorpayLink as string }),
-        ...(updateData.webhookSecret !== undefined && { webhookSecret: (updateData.webhookSecret as string) || null }),
+        donateSlug: updateData.donateSlug as string,
         minDonationAmount: updateData.minDonationAmount as number,
         alertMessageTemplate: updateData.alertMessageTemplate as string,
         isActive: updateData.isActive as boolean,
@@ -111,8 +111,7 @@ export async function POST(req: Request) {
       config: {
         id: config.id,
         streamlabsTokenSet: !!config.streamlabsToken,
-        razorpayLink: config.razorpayLink,
-        webhookSecretSet: !!config.webhookSecret,
+        donateSlug: config.donateSlug,
         minDonationAmount: config.minDonationAmount,
         alertMessageTemplate: config.alertMessageTemplate,
         isActive: config.isActive,

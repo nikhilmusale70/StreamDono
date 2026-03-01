@@ -5,13 +5,13 @@ import { decrypt } from "@/lib/crypto"
 
 const STREAMLABS_ALERTS_URL = "https://streamlabs.com/api/v1.0/alerts"
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
-) {
-  const { userId } = await params
+export async function POST(req: NextRequest) {
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    console.error("Webhook: RAZORPAY_WEBHOOK_SECRET not configured")
+    return NextResponse.json({ error: "Not configured" }, { status: 500 })
+  }
 
-  // Get raw body for signature verification (critical for Razorpay)
   const rawBody = await req.text()
   const signature = req.headers.get("x-razorpay-signature")
 
@@ -20,32 +20,20 @@ export async function POST(
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
 
-  const config = await prisma.streamerConfig.findUnique({
-    where: { userId },
-  })
-
-  if (!config) {
-    console.error("Webhook: Config not found for user", userId)
-    return NextResponse.json({ error: "Config not found" }, { status: 404 })
-  }
-
-  if (!config.webhookSecret) {
-    console.error("Webhook: Webhook secret not configured for user", userId)
-    return NextResponse.json({ error: "Webhook not configured" }, { status: 400 })
-  }
-
-  // Verify Razorpay webhook signature
   const expectedSignature = crypto
-    .createHmac("sha256", config.webhookSecret)
+    .createHmac("sha256", webhookSecret)
     .update(rawBody)
     .digest("hex")
 
   if (signature !== expectedSignature) {
-    console.error("Webhook: Signature mismatch for user", userId)
+    console.error("Webhook: Signature mismatch")
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
 
-  let payload: { event: string; payload?: { payment?: { entity?: Record<string, unknown> } } }
+  let payload: {
+    event: string
+    payload?: { payment?: { entity?: Record<string, unknown> } }
+  }
   try {
     payload = JSON.parse(rawBody)
   } catch {
@@ -63,14 +51,11 @@ export async function POST(
   }
 
   const razorpayPaymentId = payment.id as string
-  const amount = payment.amount as number // paise
+  const orderId = payment.order_id as string
+  const amount = payment.amount as number
   const currency = (payment.currency as string) ?? "INR"
-  const notes = (payment.notes as Record<string, string>) ?? {}
-  const donorName = notes.name ?? (payment.email as string) ?? "Anonymous"
   const donorEmail = (payment.email as string) ?? null
-  const message = notes.message ?? null
 
-  // Idempotency: check for duplicate
   const existing = await prisma.donation.findUnique({
     where: { razorpayPaymentId },
   })
@@ -78,42 +63,52 @@ export async function POST(
     return NextResponse.json({ received: true })
   }
 
-  // Save donation
+  const orderMapping = await prisma.orderMapping.findUnique({
+    where: { orderId },
+  })
+
+  if (!orderMapping) {
+    console.error("Webhook: Order mapping not found for", orderId)
+    return NextResponse.json({ error: "Order not found" }, { status: 400 })
+  }
+
   const donation = await prisma.donation.create({
     data: {
-      userId: config.userId,
+      userId: orderMapping.userId,
       razorpayPaymentId,
-      donorName,
+      donorName: orderMapping.donorName ?? "Anonymous",
       donorEmail,
       amount,
       currency,
-      message,
+      message: orderMapping.message,
       status: "CAPTURED",
     },
   })
 
-  // Check minimum donation
-  const minAmount = config.minDonationAmount * 100 // convert INR to paise
-  if (amount < minAmount) {
+  const config = await prisma.streamerConfig.findUnique({
+    where: { userId: orderMapping.userId },
+  })
+
+  if (!config) return NextResponse.json({ received: true })
+
+  const minAmount = config.minDonationAmount * 100
+  if (amount < minAmount || !config.isActive || !config.streamlabsToken) {
     await prisma.donation.update({
       where: { id: donation.id },
-      data: { alertSent: true }, // Mark as "processed" but no alert
+      data: { alertSent: true },
     })
     return NextResponse.json({ received: true })
   }
 
-  if (!config.isActive || !config.streamlabsToken) {
-    return NextResponse.json({ received: true })
-  }
-
-  // Send alert to Streamlabs
   try {
     const token = decrypt(config.streamlabsToken)
     const amountRupees = (amount / 100).toLocaleString("en-IN")
+    const donorName = orderMapping.donorName ?? "Anonymous"
+    const message = orderMapping.message ?? ""
     const alertMessage = config.alertMessageTemplate
       .replace(/\{name\}/g, donorName)
       .replace(/\{amount\}/g, `₹${amountRupees}`)
-      .replace(/\{message\}/g, message ?? "")
+      .replace(/\{message\}/g, message)
 
     const res = await fetch(STREAMLABS_ALERTS_URL, {
       method: "POST",
@@ -136,6 +131,8 @@ export async function POST(
   } catch (e) {
     console.error("Streamlabs alert error:", e)
   }
+
+  await prisma.orderMapping.delete({ where: { orderId } }).catch(() => {})
 
   return NextResponse.json({ received: true })
 }

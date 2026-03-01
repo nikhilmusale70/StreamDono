@@ -58,7 +58,7 @@ export default async function HomePage() {
             <IndianRupee className="h-10 w-10 text-primary mb-4" />
             <h3 className="font-semibold text-lg">Razorpay Integration</h3>
             <p className="text-muted-foreground mt-2">
-              Use your razorpay.me link. Viewers pay in INR. No PayPal or Stripe needed.
+              One Razorpay account. Viewers enter any amount and pay in INR.
             </p>
           </div>
           <div className="p-6 rounded-xl bg-background/80 border shadow-sm">

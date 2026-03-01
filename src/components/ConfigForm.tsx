@@ -16,24 +16,22 @@ import {
 interface ConfigFormProps {
   initialConfig: {
     streamlabsTokenSet: boolean
-    razorpayLink: string
-    webhookSecretSet: boolean
+    donateSlug: string
     minDonationAmount: number
     alertMessageTemplate: string
     isActive: boolean
   } | null
-  webhookUrl: string
+  donateUrl: string
 }
 
-export function ConfigForm({ initialConfig, webhookUrl }: ConfigFormProps) {
+export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [streamlabsToken, setStreamlabsToken] = useState("")
-  const [webhookSecret, setWebhookSecret] = useState("")
-  const [razorpayLink, setRazorpayLink] = useState(
-    initialConfig?.razorpayLink ?? ""
+  const [donateSlug, setDonateSlug] = useState(
+    initialConfig?.donateSlug ?? ""
   )
   const [minDonationAmount, setMinDonationAmount] = useState(
     initialConfig?.minDonationAmount ?? 10
@@ -54,8 +52,7 @@ export function ConfigForm({ initialConfig, webhookUrl }: ConfigFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           streamlabsToken: streamlabsToken || undefined,
-          razorpayLink: razorpayLink || undefined,
-          webhookSecret: webhookSecret || undefined,
+          donateSlug: donateSlug || undefined,
           minDonationAmount,
           alertMessageTemplate,
           isActive,
@@ -68,7 +65,6 @@ export function ConfigForm({ initialConfig, webhookUrl }: ConfigFormProps) {
       }
       setSuccess("Configuration saved!")
       if (streamlabsToken) setStreamlabsToken("")
-      if (webhookSecret) setWebhookSecret("")
       router.refresh()
     } catch {
       setError("Something went wrong")
@@ -97,6 +93,53 @@ export function ConfigForm({ initialConfig, webhookUrl }: ConfigFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
         <CardHeader>
+          <CardTitle>Your Donate Page</CardTitle>
+          <CardDescription>
+            Choose a unique URL slug. Share this link with your viewers — they can enter any amount.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="donateSlug">URL Slug</Label>
+            <div className="flex gap-2 items-center">
+              <span className="text-sm text-muted-foreground shrink-0">/donate/</span>
+              <Input
+                id="donateSlug"
+                placeholder="your-name"
+                value={donateSlug}
+                onChange={(e) => setDonateSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ""))}
+                required
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Use only lowercase letters, numbers, hyphens (e.g. nikhil-streams)
+            </p>
+          </div>
+          {donateSlug && (
+            <div className="space-y-2">
+              <Label>Your donate link</Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={donateUrl}
+                  className="font-mono text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigator.clipboard.writeText(donateUrl)}
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Streamlabs</CardTitle>
           <CardDescription>
             Get your Socket API Token from Streamlabs Dashboard → API Settings
@@ -116,67 +159,6 @@ export function ConfigForm({ initialConfig, webhookUrl }: ConfigFormProps) {
               value={streamlabsToken}
               onChange={(e) => setStreamlabsToken(e.target.value)}
             />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Razorpay</CardTitle>
-          <CardDescription>
-            Your razorpay.me payment link (e.g. razorpay.me/yourname)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="razorpay">Payment Link</Label>
-            <Input
-              id="razorpay"
-              type="url"
-              placeholder="https://razorpay.me/yourname"
-              value={razorpayLink}
-              onChange={(e) => setRazorpayLink(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Webhook URL (add this in Razorpay Dashboard)</Label>
-            <div className="flex gap-2">
-              <Input
-                readOnly
-                value={webhookUrl}
-                className="font-mono text-sm"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => navigator.clipboard.writeText(webhookUrl)}
-              >
-                Copy
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Razorpay Dashboard → Settings → Webhooks → Add endpoint. Select
-              &quot;payment.captured&quot; event.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="webhookSecret">Webhook Secret</Label>
-            <Input
-              id="webhookSecret"
-              type="password"
-              placeholder={
-                initialConfig?.webhookSecretSet
-                  ? "•••••••• (leave blank to keep existing)"
-                  : "Paste from Razorpay after adding webhook"
-              }
-              value={webhookSecret}
-              onChange={(e) => setWebhookSecret(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              After adding the webhook URL in Razorpay, they show a secret. Paste it here.
-            </p>
           </div>
         </CardContent>
       </Card>
