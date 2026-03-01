@@ -1,0 +1,74 @@
+// StreamDonations - Razorpay to Streamlabs Integration
+// PostgreSQL schema for Railway deployment
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum DonationStatus {
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String
+  passwordHash     String?          @map("password_hash")
+  googleId         String?          @unique @map("google_id")
+  emailVerified    DateTime?        @map("email_verified")
+  image            String?
+  subscriptionTier SubscriptionTier @default(FREE) @map("subscription_tier")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  config   StreamerConfig?
+  donations Donation[]
+
+  @@map("users")
+}
+
+model StreamerConfig {
+  id                    String   @id @default(cuid())
+  userId                String   @unique @map("user_id")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streamlabsToken       String?  @map("streamlabs_token") // Encrypted
+  razorpayLink          String   @map("razorpay_link")
+  webhookSecret         String?  @map("webhook_secret") // From Razorpay when user adds webhook
+  minDonationAmount     Int      @default(10) @map("min_donation_amount") // INR
+  alertMessageTemplate  String   @default("{name} donated ₹{amount}") @map("alert_message_template")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("streamer_config")
+}
+
+model Donation {
+  id                  String         @id @default(cuid())
+  userId              String         @map("user_id")
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  razorpayPaymentId   String         @unique @map("razorpay_payment_id")
+  donorName           String?        @map("donor_name")
+  donorEmail          String?        @map("donor_email")
+  amount              Int            // Paise (100 = ₹1)
+  currency            String         @default("INR")
+  message             String?
+  status              DonationStatus @default(CAPTURED)
+  alertSent           Boolean        @default(false) @map("alert_sent")
+  createdAt           DateTime       @default(now()) @map("created_at")
+
+  @@map("donations")
+}
