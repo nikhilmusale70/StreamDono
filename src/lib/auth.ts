@@ -67,9 +67,17 @@ export const authOptions: NextAuthOptions = {
           token.id = user.id
         }
       }
-      // For OAuth flows without an adapter, resolve DB user id by email.
-      // Keep this outside the `user` branch so retries/subsequent JWT calls still recover.
-      if (!token.id && token.email && (account?.provider === "google" || !account)) {
+      // For Google OAuth without an adapter, always map to our DB user id by email.
+      // This overrides provider profile ids (e.g. Google subject id) so app queries use `users.id`.
+      if (token.email && account?.provider === "google") {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email },
+          select: { id: true },
+        })
+        if (dbUser) token.id = dbUser.id
+      }
+      // On subsequent JWT callbacks `account` is undefined; recover missing id if needed.
+      if (!token.id && token.email && !account) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
           select: { id: true },
