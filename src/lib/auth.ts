@@ -65,14 +65,16 @@ export const authOptions: NextAuthOptions = {
         // Credentials provider returns id directly on user.
         if (user.id) {
           token.id = user.id
-        } else if (account?.provider === "google" && token.email) {
-          // For Google OAuth without an adapter, resolve DB user id by email.
-          const dbUser = await prisma.user.findUnique({
-            where: { email: token.email },
-            select: { id: true },
-          })
-          if (dbUser) token.id = dbUser.id
         }
+      }
+      // For OAuth flows without an adapter, resolve DB user id by email.
+      // Keep this outside the `user` branch so retries/subsequent JWT calls still recover.
+      if (!token.id && token.email && (account?.provider === "google" || !account)) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email },
+          select: { id: true },
+        })
+        if (dbUser) token.id = dbUser.id
       }
       return token
     },
