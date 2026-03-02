@@ -18,6 +18,8 @@ interface ConfigFormProps {
     donateSlug: string
     minDonationAmount: number
     alertMessageTemplate: string
+    overlayAnimation: "slide" | "pop" | "bounce"
+    overlaySoundUrl: string | null
     isActive: boolean
   } | null
   donateUrl: string
@@ -37,6 +39,13 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
   const [alertMessageTemplate, setAlertMessageTemplate] = useState(
     initialConfig?.alertMessageTemplate ?? "{name} donated ₹{amount}"
   )
+  const [overlayAnimation, setOverlayAnimation] = useState<"slide" | "pop" | "bounce">(
+    initialConfig?.overlayAnimation ?? "slide"
+  )
+  const [overlaySoundUrl, setOverlaySoundUrl] = useState<string | null>(
+    initialConfig?.overlaySoundUrl ?? null
+  )
+  const [uploadingSound, setUploadingSound] = useState(false)
   const [isActive, setIsActive] = useState(initialConfig?.isActive ?? true)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -52,6 +61,8 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
           donateSlug: donateSlug || undefined,
           minDonationAmount,
           alertMessageTemplate,
+          overlayAnimation,
+          overlaySoundUrl,
           isActive,
         }),
       })
@@ -67,6 +78,30 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleSoundUpload(file: File) {
+    if (!file.type.startsWith("audio/")) {
+      setError("Please upload an audio file (mp3/wav/ogg).")
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Audio file must be 2MB or smaller.")
+      return
+    }
+    setUploadingSound(true)
+    setError("")
+    const reader = new FileReader()
+    reader.onload = () => {
+      setOverlaySoundUrl(typeof reader.result === "string" ? reader.result : null)
+      setUploadingSound(false)
+      setSuccess("Sound selected. Click Save Configuration to apply.")
+    }
+    reader.onerror = () => {
+      setUploadingSound(false)
+      setError("Failed to read audio file")
+    }
+    reader.readAsDataURL(file)
   }
 
   async function handleTestAlert() {
@@ -172,6 +207,48 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
               value={minDonationAmount}
               onChange={(e) => setMinDonationAmount(parseInt(e.target.value) || 0)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="animation">Alert Animation</Label>
+            <select
+              id="animation"
+              value={overlayAnimation}
+              onChange={(e) => setOverlayAnimation(e.target.value as "slide" | "pop" | "bounce")}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="slide">Slide In</option>
+              <option value="pop">Pop In</option>
+              <option value="bounce">Bounce</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="soundUpload">Alert Sound (optional)</Label>
+            <Input
+              id="soundUpload"
+              type="file"
+              accept="audio/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) void handleSoundUpload(file)
+              }}
+              disabled={uploadingSound}
+            />
+            <p className="text-xs text-muted-foreground">
+              Upload mp3/wav/ogg up to 2MB.
+            </p>
+            {overlaySoundUrl ? (
+              <div className="flex items-center gap-2">
+                <audio src={overlaySoundUrl} controls className="h-10" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOverlaySoundUrl(null)}
+                >
+                  Remove Sound
+                </Button>
+              </div>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             <input

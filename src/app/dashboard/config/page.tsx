@@ -17,7 +17,6 @@ export default async function ConfigPage() {
   const donateUrl = config
     ? `${baseUrl}/donate/${config.donateSlug}`
     : `${baseUrl}/donate/`
-  const webhookUrl = `${baseUrl}/api/webhook`
   const overlayUrl = config
     ? `${baseUrl}/overlay/${config.donateSlug}`
     : `${baseUrl}/overlay/your-slug`
@@ -38,24 +37,14 @@ export default async function ConfigPage() {
                 donateSlug: config.donateSlug,
                 minDonationAmount: config.minDonationAmount,
                 alertMessageTemplate: config.alertMessageTemplate,
+                overlayAnimation: (config.overlayAnimation as "slide" | "pop" | "bounce") ?? "slide",
+                overlaySoundUrl: config.overlaySoundUrl,
                 isActive: config.isActive,
               }
             : null
         }
         donateUrl={donateUrl}
       />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Platform Razorpay Setup</CardTitle>
-          <CardDescription>
-            Add this webhook URL in Razorpay Dashboard. Set RAZORPAY_WEBHOOK_SECRET in env.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="font-mono text-sm break-all">{webhookUrl}</p>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>

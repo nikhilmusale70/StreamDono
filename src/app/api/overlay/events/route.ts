@@ -24,14 +24,26 @@ export async function GET(req: NextRequest) {
 
   const config = await prisma.streamerConfig.findUnique({
     where: { donateSlug: slug },
-    select: { userId: true, minDonationAmount: true, isActive: true },
+    select: {
+      userId: true,
+      minDonationAmount: true,
+      isActive: true,
+      overlayAnimation: true,
+      overlaySoundUrl: true,
+    },
   })
   if (!config) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
   if (!config.isActive) {
-    return NextResponse.json({ events: [] })
+    return NextResponse.json({
+      events: [],
+      settings: {
+        animation: config.overlayAnimation ?? "slide",
+        soundUrl: config.overlaySoundUrl ?? null,
+      },
+    })
   }
 
   const minAmountPaise = config.minDonationAmount * 100
@@ -77,5 +89,11 @@ export async function GET(req: NextRequest) {
     (a, b) => a.createdAtMs - b.createdAtMs
   )
 
-  return NextResponse.json({ events })
+  return NextResponse.json({
+    events,
+    settings: {
+      animation: config.overlayAnimation ?? "slide",
+      soundUrl: config.overlaySoundUrl ?? null,
+    },
+  })
 }

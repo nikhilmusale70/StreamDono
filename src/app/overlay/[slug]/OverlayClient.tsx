@@ -11,6 +11,11 @@ type OverlayEvent = {
   isTest: boolean
 }
 
+type OverlaySettings = {
+  animation: "slide" | "pop" | "bounce"
+  soundUrl: string | null
+}
+
 function formatAmount(paise: number) {
   return `₹${(paise / 100).toLocaleString("en-IN")}`
 }
@@ -19,8 +24,25 @@ export default function OverlayClient({ slug }: { slug: string }) {
   const [queue, setQueue] = useState<OverlayEvent[]>([])
   const [current, setCurrent] = useState<OverlayEvent | null>(null)
   const [visible, setVisible] = useState(false)
+  const [settings, setSettings] = useState<OverlaySettings>({
+    animation: "slide",
+    soundUrl: null,
+  })
   const afterRef = useRef<number>(Date.now())
   const busyRef = useRef(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    // Force transparent page in browser sources.
+    document.documentElement.style.background = "transparent"
+    document.body.style.background = "transparent"
+    document.body.style.margin = "0"
+    return () => {
+      document.documentElement.style.background = ""
+      document.body.style.background = ""
+      document.body.style.margin = ""
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -32,8 +54,17 @@ export default function OverlayClient({ slug }: { slug: string }) {
           { cache: "no-store" }
         )
         if (!res.ok) return
-        const data = (await res.json()) as { events?: OverlayEvent[] }
+        const data = (await res.json()) as {
+          events?: OverlayEvent[]
+          settings?: OverlaySettings
+        }
         const events = data.events ?? []
+        if (data.settings) {
+          setSettings({
+            animation: data.settings.animation ?? "slide",
+            soundUrl: data.settings.soundUrl ?? null,
+          })
+        }
         if (events.length > 0 && !cancelled) {
           setQueue((prev) => [...prev, ...events])
           afterRef.current = Math.max(
@@ -62,6 +93,13 @@ export default function OverlayClient({ slug }: { slug: string }) {
     setCurrent(next)
     setVisible(true)
 
+    if (settings.soundUrl) {
+      const audio = new Audio(settings.soundUrl)
+      audio.volume = 0.8
+      audioRef.current = audio
+      void audio.play().catch(() => {})
+    }
+
     const hideTimer = setTimeout(() => setVisible(false), 5000)
     const clearTimer = setTimeout(() => {
       setCurrent(null)
@@ -71,15 +109,21 @@ export default function OverlayClient({ slug }: { slug: string }) {
     return () => {
       clearTimeout(hideTimer)
       clearTimeout(clearTimer)
+      audioRef.current?.pause()
     }
-  }, [queue, current])
+  }, [queue, current, settings.soundUrl])
+
+  const animationClass = (() => {
+    if (!visible) return "opacity-0 translate-y-[-20px] scale-95"
+    if (settings.animation === "pop") return "opacity-100 translate-y-0 scale-100"
+    if (settings.animation === "bounce") return "opacity-100 translate-y-0 scale-100 animate-bounce"
+    return "opacity-100 translate-y-0 scale-100"
+  })()
 
   return (
-    <div className="w-screen h-screen bg-transparent overflow-hidden relative">
+    <div className="w-screen h-screen overflow-hidden relative" style={{ background: "transparent" }}>
       <div
-        className={`absolute left-1/2 -translate-x-1/2 transition-all duration-500 ${
-          visible ? "top-10 opacity-100" : "top-0 opacity-0"
-        }`}
+        className={`absolute left-1/2 -translate-x-1/2 top-10 transition-all duration-500 ${animationClass}`}
       >
         {current && (
           <div className="min-w-[560px] max-w-[860px] rounded-2xl border border-emerald-300/60 bg-slate-900/95 shadow-2xl backdrop-blur px-8 py-6">

@@ -2,14 +2,14 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { encrypt } from "@/lib/crypto"
 import { z } from "zod"
 
 const configSchema = z.object({
-  streamlabsToken: z.string().optional(),
   donateSlug: z.string().min(1).max(50).regex(/^[a-z0-9-_]+$/, "Use only lowercase letters, numbers, hyphens"),
   minDonationAmount: z.number().min(0).max(100000).optional(),
   alertMessageTemplate: z.string().max(500).optional(),
+  overlayAnimation: z.enum(["slide", "pop", "bounce"]).optional(),
+  overlaySoundUrl: z.string().max(1200000).nullable().optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -31,10 +31,11 @@ export async function GET() {
   return NextResponse.json({
     config: {
       id: config.id,
-      streamlabsTokenSet: !!config.streamlabsToken,
       donateSlug: config.donateSlug,
       minDonationAmount: config.minDonationAmount,
       alertMessageTemplate: config.alertMessageTemplate,
+      overlayAnimation: config.overlayAnimation,
+      overlaySoundUrl: config.overlaySoundUrl,
       isActive: config.isActive,
     },
   })
@@ -79,30 +80,28 @@ export async function POST(req: Request) {
       donateSlug,
       minDonationAmount: data.minDonationAmount ?? existing?.minDonationAmount ?? 10,
       alertMessageTemplate: data.alertMessageTemplate ?? existing?.alertMessageTemplate ?? "{name} donated ₹{amount}",
+      overlayAnimation: data.overlayAnimation ?? existing?.overlayAnimation ?? "slide",
+      overlaySoundUrl: data.overlaySoundUrl !== undefined ? data.overlaySoundUrl : (existing?.overlaySoundUrl ?? null),
       isActive: data.isActive ?? existing?.isActive ?? true,
-    }
-
-    if (data.streamlabsToken !== undefined) {
-      updateData.streamlabsToken = data.streamlabsToken
-        ? encrypt(data.streamlabsToken)
-        : null
     }
 
     const config = await prisma.streamerConfig.upsert({
       where: { userId: session.user.id },
       create: {
         userId: session.user.id,
-        streamlabsToken: updateData.streamlabsToken ? (updateData.streamlabsToken as string) : null,
         donateSlug: updateData.donateSlug as string,
         minDonationAmount: updateData.minDonationAmount as number,
         alertMessageTemplate: updateData.alertMessageTemplate as string,
+        overlayAnimation: updateData.overlayAnimation as string,
+        overlaySoundUrl: updateData.overlaySoundUrl as string | null,
         isActive: updateData.isActive as boolean,
       },
       update: {
-        ...(updateData.streamlabsToken !== undefined && { streamlabsToken: (updateData.streamlabsToken as string) || null }),
         donateSlug: updateData.donateSlug as string,
         minDonationAmount: updateData.minDonationAmount as number,
         alertMessageTemplate: updateData.alertMessageTemplate as string,
+        overlayAnimation: updateData.overlayAnimation as string,
+        overlaySoundUrl: updateData.overlaySoundUrl as string | null,
         isActive: updateData.isActive as boolean,
       },
     })
@@ -110,10 +109,11 @@ export async function POST(req: Request) {
     return NextResponse.json({
       config: {
         id: config.id,
-        streamlabsTokenSet: !!config.streamlabsToken,
         donateSlug: config.donateSlug,
         minDonationAmount: config.minDonationAmount,
         alertMessageTemplate: config.alertMessageTemplate,
+        overlayAnimation: config.overlayAnimation,
+        overlaySoundUrl: config.overlaySoundUrl,
         isActive: config.isActive,
       },
     })
