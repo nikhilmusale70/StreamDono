@@ -6,16 +6,22 @@ import { IndianRupee, Zap, BarChart3, Shield } from "lucide-react"
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions)
+  const isAuthenticated = Boolean(session?.user?.id)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <header className="container flex h-16 items-center justify-between">
         <span className="font-bold text-xl">StreamDonations</span>
         <nav className="flex gap-4">
-          {session ? (
-            <Button asChild>
-              <Link href="/dashboard">Dashboard</Link>
-            </Button>
+          {isAuthenticated ? (
+            <>
+              <Button asChild variant="outline">
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/api/auth/signout">Sign out</Link>
+              </Button>
+            </>
           ) : (
             <>
               <Button asChild variant="ghost">
@@ -41,7 +47,7 @@ export default async function HomePage() {
             Streamlabs. Built for Indian streamers.
           </p>
           <div className="flex gap-4 justify-center">
-            {session ? (
+            {isAuthenticated ? (
               <Button asChild size="lg">
                 <Link href="/dashboard">Go to Dashboard</Link>
               </Button>

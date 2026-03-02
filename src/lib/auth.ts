@@ -66,12 +66,17 @@ export const authOptions: NextAuthOptions = {
         if (user.id) {
           token.id = user.id
         }
+        if (!token.email && user.email) {
+          token.email = user.email
+        }
       }
       // For Google OAuth without an adapter, always map to our DB user id by email.
       // This overrides provider profile ids (e.g. Google subject id) so app queries use `users.id`.
-      if (token.email && account?.provider === "google") {
+      if (account?.provider === "google") {
+        const lookupEmail = user?.email ?? token.email
+        if (!lookupEmail) return token
         const dbUser = await prisma.user.findUnique({
-          where: { email: token.email },
+          where: { email: lookupEmail },
           select: { id: true },
         })
         if (dbUser) token.id = dbUser.id

@@ -9,7 +9,7 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const session = await getServerSession(authOptions)
-  if (!session) redirect("/login")
+  if (!session?.user?.id) redirect("/login")
 
   return (
     <div className="min-h-screen bg-muted/30">
