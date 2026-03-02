@@ -18,13 +18,16 @@ export default async function ConfigPage() {
     ? `${baseUrl}/donate/${config.donateSlug}`
     : `${baseUrl}/donate/`
   const webhookUrl = `${baseUrl}/api/webhook`
+  const overlayUrl = config
+    ? `${baseUrl}/overlay/${config.donateSlug}`
+    : `${baseUrl}/overlay/your-slug`
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-3xl font-bold">Configuration</h1>
         <p className="text-muted-foreground mt-1">
-          Set up your donate page and Streamlabs for real-time alerts
+          Set up your donate page and real-time alerts for stream overlay
         </p>
       </div>
 
@@ -32,7 +35,6 @@ export default async function ConfigPage() {
         initialConfig={
           config
             ? {
-                streamlabsTokenSet: !!config.streamlabsToken,
                 donateSlug: config.donateSlug,
                 minDonationAmount: config.minDonationAmount,
                 alertMessageTemplate: config.alertMessageTemplate,
@@ -52,6 +54,18 @@ export default async function ConfigPage() {
         </CardHeader>
         <CardContent>
           <p className="font-mono text-sm break-all">{webhookUrl}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>OBS Overlay URL</CardTitle>
+          <CardDescription>
+            Add this as a Browser Source in OBS/Streamlabs Desktop for live alerts.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="font-mono text-sm break-all">{overlayUrl}</p>
         </CardContent>
       </Card>
     </div>

@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
-import { decrypt } from "@/lib/crypto"
-
-const STREAMLABS_ALERTS_URL = "https://streamlabs.com/api/v1.0/alerts"
 
 export async function POST(req: NextRequest) {
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
@@ -102,52 +99,10 @@ export async function POST(req: NextRequest) {
     throw e
   }
 
-  const config = await prisma.streamerConfig.findUnique({
-    where: { userId: orderMapping.userId },
+  await prisma.donation.update({
+    where: { id: donation.id },
+    data: { alertSent: true },
   })
-
-  if (!config) return NextResponse.json({ received: true })
-
-  const minAmount = config.minDonationAmount * 100
-  if (amount < minAmount || !config.isActive || !config.streamlabsToken) {
-    await prisma.donation.update({
-      where: { id: donation.id },
-      data: { alertSent: true },
-    })
-    return NextResponse.json({ received: true })
-  }
-
-  try {
-    const token = decrypt(config.streamlabsToken)
-    const amountRupees = (amount / 100).toLocaleString("en-IN")
-    const donorName = orderMapping.donorName ?? "Anonymous"
-    const message = orderMapping.message ?? ""
-    const alertMessage = config.alertMessageTemplate
-      .replace(/\{name\}/g, donorName)
-      .replace(/\{amount\}/g, `₹${amountRupees}`)
-      .replace(/\{message\}/g, message)
-
-    const res = await fetch(STREAMLABS_ALERTS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        access_token: token,
-        type: "donation",
-        message: alertMessage,
-      }),
-    })
-
-    if (res.ok) {
-      await prisma.donation.update({
-        where: { id: donation.id },
-        data: { alertSent: true },
-      })
-    } else {
-      console.error("Streamlabs alert failed:", res.status, await res.text())
-    }
-  } catch (e) {
-    console.error("Streamlabs alert error:", e)
-  }
 
   await prisma.orderMapping.delete({ where: { orderId } }).catch(() => {})
 

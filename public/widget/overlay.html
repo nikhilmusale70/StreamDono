@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>StreamDono Overlay</title>
+    <style>
+      body { margin:0; font-family: system-ui, -apple-system, Roboto, sans-serif; background: transparent; }
+      .container { position:fixed; left:50%; top:20%; transform:translateX(-50%); pointer-events:none; }
+      .alert { background: rgba(0,0,0,0.6); color: #fff; padding:18px 24px; border-radius:10px; min-width:320px; text-align:center; box-shadow:0 6px 20px rgba(0,0,0,0.4); opacity:0; transform:translateY(-20px) scale(0.98); transition:opacity .25s, transform .35s; }
+      .alert.show { opacity:1; transform:translateY(0) scale(1); }
+      .name { font-weight:700; font-size:20px; }
+      .amount { font-weight:800; font-size:22px; margin-top:6px; color:#ffd700; }
+      .message { margin-top:8px; font-size:14px; color:#ddd }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="alert" class="alert" aria-hidden="true">
+        <div id="name" class="name"></div>
+        <div id="amount" class="amount"></div>
+        <div id="message" class="message"></div>
+      </div>
+    </div>
+
+    <script>
+      const params = new URLSearchParams(location.search)
+      const slug = params.get('slug')
+      if (!slug) {
+        document.getElementById('name').textContent = 'Missing slug'
+        document.getElementById('alert').classList.add('show')
+        throw new Error('widget slug required as ?slug=...')
+      }
+
+      const alertEl = document.getElementById('alert')
+      const nameEl = document.getElementById('name')
+      const amountEl = document.getElementById('amount')
+      const messageEl = document.getElementById('message')
+
+      const storageKey = 'streamdono_last_' + slug
+      let lastId = localStorage.getItem(storageKey)
+
+      async function poll() {
+        try {
+          const res = await fetch('/api/widget/' + encodeURIComponent(slug))
+          if (!res.ok) return
+          const json = await res.json()
+          const d = json.donation
+          if (!d) return
+          if (d.id === lastId) return
+          // show alert
+          const rupees = (d.amount/100).toLocaleString('en-IN')
+          nameEl.textContent = d.donorName ?? 'Anonymous'
+          amountEl.textContent = '₹' + rupees
+          messageEl.textContent = d.message || ''
+          alertEl.classList.add('show')
+          localStorage.setItem(storageKey, d.id)
+          lastId = d.id
+          // hide after 6s
+          setTimeout(()=> alertEl.classList.remove('show'), 6000)
+        } catch (e) {
+          console.error(e)
+        }
+      }
+
+      // initial poll then interval
+      poll()
+      setInterval(poll, 3000)
+    </script>
+  </body>
+</html>

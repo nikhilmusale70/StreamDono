@@ -15,7 +15,6 @@ import {
 
 interface ConfigFormProps {
   initialConfig: {
-    streamlabsTokenSet: boolean
     donateSlug: string
     minDonationAmount: number
     alertMessageTemplate: string
@@ -29,7 +28,6 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const [streamlabsToken, setStreamlabsToken] = useState("")
   const [donateSlug, setDonateSlug] = useState(
     initialConfig?.donateSlug ?? ""
   )
@@ -51,7 +49,6 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          streamlabsToken: streamlabsToken || undefined,
           donateSlug: donateSlug || undefined,
           minDonationAmount,
           alertMessageTemplate,
@@ -64,7 +61,6 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
         return
       }
       setSuccess("Configuration saved!")
-      if (streamlabsToken) setStreamlabsToken("")
       router.refresh()
     } catch {
       setError("Something went wrong")
@@ -80,7 +76,7 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
       const res = await fetch("/api/config/test", { method: "POST" })
       const data = await res.json()
       if (res.ok) {
-        setSuccess("Test alert sent! Check your Streamlabs/OBS.")
+        setSuccess("Test alert queued! Check your overlay source.")
       } else {
         setError(data.error || "Test failed")
       }
@@ -140,27 +136,11 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Streamlabs</CardTitle>
+          <CardTitle>Custom Overlay</CardTitle>
           <CardDescription>
-            Get your Socket API Token from Streamlabs Dashboard → API Settings
+            Use the OBS Overlay URL below this form as a Browser Source to display live alerts.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="streamlabs">Socket API Token</Label>
-            <Input
-              id="streamlabs"
-              type="password"
-              placeholder={
-                initialConfig?.streamlabsTokenSet
-                  ? "•••••••• (leave blank to keep existing)"
-                  : "Paste your token here"
-              }
-              value={streamlabsToken}
-              onChange={(e) => setStreamlabsToken(e.target.value)}
-            />
-          </div>
-        </CardContent>
       </Card>
 
       <Card>
@@ -225,7 +205,7 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
           type="button"
           variant="outline"
           onClick={handleTestAlert}
-          disabled={!initialConfig?.streamlabsTokenSet && !streamlabsToken}
+          disabled={!isActive}
         >
           Send Test Alert
         </Button>
