@@ -15,12 +15,14 @@ export default async function ConfigPage() {
   })
 
   const hdrs = await headers()
-  const forwardedHost = hdrs.get("x-forwarded-host")
+  const forwardedHostRaw = hdrs.get("x-forwarded-host")
+  const forwardedProtoRaw = hdrs.get("x-forwarded-proto")
+  const forwardedHost = forwardedHostRaw?.split(",")[0]?.trim()
+  const forwardedProto = forwardedProtoRaw?.split(",")[0]?.trim()
   const host = forwardedHost ?? hdrs.get("host")
-  const forwardedProto = hdrs.get("x-forwarded-proto")
   const protocol = forwardedProto ?? (host?.includes("localhost") ? "http" : "https")
   const runtimeBaseUrl = host ? `${protocol}://${host}` : null
-  const baseUrl = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? runtimeBaseUrl ?? "http://localhost:3000"
+  const baseUrl = runtimeBaseUrl ?? process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
   const donateUrl = config
     ? `${baseUrl}/donate/${config.donateSlug}`
     : `${baseUrl}/donate/`
