@@ -165,7 +165,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
         className={`absolute left-1/2 -translate-x-1/2 top-10 transition-all duration-500 ${animationClass}`}
       >
         {current && (
-          <div className="min-w-[560px] max-w-[860px] rounded-2xl border border-emerald-300/60 bg-slate-900/95 shadow-2xl backdrop-blur px-8 py-6">
+          <div className="min-w-[560px] max-w-[860px] rounded-2xl border border-emerald-300/60 bg-slate-900/95 shadow-2xl backdrop-blur px-8 py-6 text-center">
             <p className="text-emerald-300 text-sm uppercase tracking-widest">
               {current.isTest ? "Test Alert" : "New Donation"}
             </p>
