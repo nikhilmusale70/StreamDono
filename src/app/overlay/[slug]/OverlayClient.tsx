@@ -97,6 +97,10 @@ export default function OverlayClient({ slug }: { slug: string }) {
     setQueue((prev) => prev.slice(1))
     setCurrent(next)
     setVisible(true)
+  }, [queue, current])
+
+  useEffect(() => {
+    if (!current) return
 
     if (settings.soundUrl) {
       const audio = new Audio(settings.soundUrl)
@@ -110,6 +114,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
     const clearTimer = setTimeout(() => {
       setCurrent(null)
       busyRef.current = false
+      audioRef.current?.pause()
     }, duration + 700)
 
     return () => {
@@ -117,7 +122,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
       clearTimeout(clearTimer)
       audioRef.current?.pause()
     }
-  }, [queue, current, settings.soundUrl])
+  }, [current, settings.soundUrl, settings.durationMs])
 
   const animationClass = (() => {
     if (!visible) return "opacity-0 translate-y-[-20px] scale-95"
