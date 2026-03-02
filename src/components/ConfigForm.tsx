@@ -20,6 +20,7 @@ interface ConfigFormProps {
     alertMessageTemplate: string
     overlayAnimation: "slide" | "pop" | "bounce"
     overlaySoundUrl: string | null
+    overlayVolume: number
     overlayDurationMs: number
     isActive: boolean
   } | null
@@ -46,6 +47,9 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
   const [overlaySoundUrl, setOverlaySoundUrl] = useState<string | null>(
     initialConfig?.overlaySoundUrl ?? null
   )
+  const [overlayVolume, setOverlayVolume] = useState<number>(
+    initialConfig?.overlayVolume ?? 80
+  )
   const [overlayDurationMs, setOverlayDurationMs] = useState<number>(
     initialConfig?.overlayDurationMs ?? 5000
   )
@@ -67,6 +71,7 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
           alertMessageTemplate,
           overlayAnimation,
           overlaySoundUrl,
+          overlayVolume,
           overlayDurationMs,
           isActive,
         }),
@@ -125,6 +130,24 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
     }
   }
 
+  async function handleShareDonateLink() {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Donate link",
+          text: "Support my stream",
+          url: donateUrl,
+        })
+        return
+      }
+      await navigator.clipboard.writeText(donateUrl)
+      setSuccess("Donate link copied!")
+    } catch {
+      // Clipboard can fail on insecure context on some mobile browsers.
+      window.open(donateUrl, "_blank", "noopener,noreferrer")
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
@@ -164,9 +187,17 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => navigator.clipboard.writeText(donateUrl)}
+                  onClick={handleShareDonateLink}
                 >
-                  Copy
+                  Share
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(donateUrl, "_blank", "noopener,noreferrer")}
+                >
+                  Open
                 </Button>
               </div>
             </div>
@@ -243,6 +274,18 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="volume">Alert Volume ({overlayVolume}%)</Label>
+            <Input
+              id="volume"
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={overlayVolume}
+              onChange={(e) => setOverlayVolume(Number(e.target.value))}
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="soundUpload">Alert Sound (optional)</Label>
             <Input
               id="soundUpload"
@@ -260,6 +303,18 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
             {overlaySoundUrl ? (
               <div className="flex items-center gap-2">
                 <audio src={overlaySoundUrl} controls className="h-10" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const audio = new Audio(overlaySoundUrl)
+                    audio.volume = Math.min(1, Math.max(0, overlayVolume / 100))
+                    void audio.play().catch(() => setError("Unable to play audio preview"))
+                  }}
+                >
+                  Play Sound
+                </Button>
                 <Button
                   type="button"
                   variant="outline"

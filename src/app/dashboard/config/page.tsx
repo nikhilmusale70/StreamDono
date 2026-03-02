@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import { authOptions } from "@/lib/auth"
 import { ConfigForm } from "@/components/ConfigForm"
 import { prisma } from "@/lib/prisma"
@@ -13,7 +14,13 @@ export default async function ConfigPage() {
     where: { userId: session.user.id },
   })
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000"
+  const hdrs = await headers()
+  const forwardedHost = hdrs.get("x-forwarded-host")
+  const host = forwardedHost ?? hdrs.get("host")
+  const forwardedProto = hdrs.get("x-forwarded-proto")
+  const protocol = forwardedProto ?? (host?.includes("localhost") ? "http" : "https")
+  const runtimeBaseUrl = host ? `${protocol}://${host}` : null
+  const baseUrl = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? runtimeBaseUrl ?? "http://localhost:3000"
   const donateUrl = config
     ? `${baseUrl}/donate/${config.donateSlug}`
     : `${baseUrl}/donate/`
@@ -39,6 +46,7 @@ export default async function ConfigPage() {
                 alertMessageTemplate: config.alertMessageTemplate,
                 overlayAnimation: (config.overlayAnimation as "slide" | "pop" | "bounce") ?? "slide",
                 overlaySoundUrl: config.overlaySoundUrl,
+                overlayVolume: config.overlayVolume ?? 80,
                 overlayDurationMs: config.overlayDurationMs ?? 5000,
                 isActive: config.isActive,
               }

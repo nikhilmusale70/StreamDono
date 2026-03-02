@@ -14,6 +14,7 @@ type OverlayEvent = {
 type OverlaySettings = {
   animation: "slide" | "pop" | "bounce"
   soundUrl: string | null
+  volume: number
   durationMs: number
 }
 
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
       isActive: true,
       overlayAnimation: true,
       overlaySoundUrl: true,
+      overlayVolume: true,
       overlayDurationMs: true,
     },
   })
@@ -49,6 +51,7 @@ export async function GET(req: NextRequest) {
       settings: {
         animation: config.overlayAnimation ?? "slide",
         soundUrl: config.overlaySoundUrl ?? null,
+        volume: config.overlayVolume ?? 80,
         durationMs: config.overlayDurationMs ?? 5000,
       },
     })
@@ -102,6 +105,7 @@ export async function GET(req: NextRequest) {
     settings: {
       animation: config.overlayAnimation ?? "slide",
       soundUrl: config.overlaySoundUrl ?? null,
+      volume: config.overlayVolume ?? 80,
       durationMs: config.overlayDurationMs ?? 5000,
     },
   })

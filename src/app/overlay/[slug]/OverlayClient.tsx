@@ -14,6 +14,7 @@ type OverlayEvent = {
 type OverlaySettings = {
   animation: "slide" | "pop" | "bounce"
   soundUrl: string | null
+  volume: number
   durationMs: number
 }
 
@@ -28,6 +29,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
   const [settings, setSettings] = useState<OverlaySettings>({
     animation: "slide",
     soundUrl: null,
+    volume: 80,
     durationMs: 5000,
   })
   const afterRef = useRef<number>(Date.now())
@@ -66,6 +68,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
           setSettings({
             animation: data.settings.animation ?? "slide",
             soundUrl: data.settings.soundUrl ?? null,
+            volume: data.settings.volume ?? 80,
             durationMs: data.settings.durationMs ?? 5000,
           })
         }
@@ -104,7 +107,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
 
     if (settings.soundUrl) {
       const audio = new Audio(settings.soundUrl)
-      audio.volume = 0.8
+      audio.volume = Math.min(1, Math.max(0, settings.volume / 100))
       audioRef.current = audio
       void audio.play().catch(() => {})
     }
@@ -122,7 +125,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
       clearTimeout(clearTimer)
       audioRef.current?.pause()
     }
-  }, [current, settings.soundUrl, settings.durationMs])
+  }, [current, settings.soundUrl, settings.volume, settings.durationMs])
 
   const animationClass = (() => {
     if (!visible) return "opacity-0 translate-y-[-20px] scale-95"
