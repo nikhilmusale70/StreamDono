@@ -57,8 +57,7 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
   const [isActive, setIsActive] = useState(initialConfig?.isActive ?? true)
 
   function volumeToGain(volumePercent: number) {
-    const normalized = Math.min(100, Math.max(0, Number(volumePercent) || 0)) / 100
-    return Math.pow(normalized, 2)
+    return Math.min(1, Math.max(0, Number(volumePercent) || 0) / 100)
   }
 
   async function handleSubmit(e: React.FormEvent) {

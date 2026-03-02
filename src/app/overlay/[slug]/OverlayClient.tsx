@@ -23,9 +23,7 @@ function formatAmount(paise: number) {
 }
 
 function volumeToGain(volumePercent: number) {
-  const normalized = Math.min(100, Math.max(0, Number(volumePercent) || 0)) / 100
-  // Perceptual curve so low values are noticeably quieter.
-  return Math.pow(normalized, 2)
+  return Math.min(1, Math.max(0, Number(volumePercent) || 0) / 100)
 }
 
 export default function OverlayClient({ slug }: { slug: string }) {
@@ -111,13 +109,24 @@ export default function OverlayClient({ slug }: { slug: string }) {
   useEffect(() => {
     if (!current) return
 
+    // Always stop any previous sound before handling the next alert.
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      audioRef.current = null
+    }
+
     if (settings.soundUrl) {
-      const audio = new Audio(settings.soundUrl)
       const gain = volumeToGain(settings.volume)
+      if (gain <= 0) {
+        // Explicit mute: do not play any audio for this alert.
+      } else {
+      const audio = new Audio(settings.soundUrl)
       audio.volume = gain
       audio.muted = gain === 0
       audioRef.current = audio
       void audio.play().catch(() => {})
+      }
     }
 
     const duration = Math.max(1500, settings.durationMs ?? 5000)
@@ -125,13 +134,21 @@ export default function OverlayClient({ slug }: { slug: string }) {
     const clearTimer = setTimeout(() => {
       setCurrent(null)
       busyRef.current = false
-      audioRef.current?.pause()
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+        audioRef.current = null
+      }
     }, duration + 700)
 
     return () => {
       clearTimeout(hideTimer)
       clearTimeout(clearTimer)
-      audioRef.current?.pause()
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+        audioRef.current = null
+      }
     }
   }, [current, settings.soundUrl, settings.volume, settings.durationMs])
 
