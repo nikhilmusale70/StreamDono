@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
+import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { decrypt } from "@/lib/crypto"
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  if (payload.event !== "payment.captured") {
+  if (payload.event !== "payment.captured" && payload.event !== "order.paid") {
     return NextResponse.json({ received: true })
   }
 
@@ -55,6 +56,11 @@ export async function POST(req: NextRequest) {
   const amount = payment.amount as number
   const currency = (payment.currency as string) ?? "INR"
   const donorEmail = (payment.email as string) ?? null
+
+  if (!razorpayPaymentId || !orderId || typeof amount !== "number") {
+    console.error("Webhook: Missing required payment fields")
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 })
+  }
 
   const existing = await prisma.donation.findUnique({
     where: { razorpayPaymentId },
@@ -72,18 +78,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Order not found" }, { status: 400 })
   }
 
-  const donation = await prisma.donation.create({
-    data: {
-      userId: orderMapping.userId,
-      razorpayPaymentId,
-      donorName: orderMapping.donorName ?? "Anonymous",
-      donorEmail,
-      amount,
-      currency,
-      message: orderMapping.message,
-      status: "CAPTURED",
-    },
-  })
+  let donation: { id: string }
+  try {
+    donation = await prisma.donation.create({
+      data: {
+        userId: orderMapping.userId,
+        razorpayPaymentId,
+        donorName: orderMapping.donorName ?? "Anonymous",
+        donorEmail,
+        amount,
+        currency,
+        message: orderMapping.message,
+        status: "CAPTURED",
+      },
+      select: { id: true },
+    })
+  } catch (e) {
+    // Idempotency: if Razorpay retries the same payment webhook concurrently,
+    // unique constraint on `razorpayPaymentId` can race. Treat as already processed.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json({ received: true })
+    }
+    throw e
+  }
 
   const config = await prisma.streamerConfig.findUnique({
     where: { userId: orderMapping.userId },
