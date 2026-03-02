@@ -22,6 +22,12 @@ function formatAmount(paise: number) {
   return `₹${(paise / 100).toLocaleString("en-IN")}`
 }
 
+function volumeToGain(volumePercent: number) {
+  const normalized = Math.min(100, Math.max(0, Number(volumePercent) || 0)) / 100
+  // Perceptual curve so low values are noticeably quieter.
+  return Math.pow(normalized, 2)
+}
+
 export default function OverlayClient({ slug }: { slug: string }) {
   const [queue, setQueue] = useState<OverlayEvent[]>([])
   const [current, setCurrent] = useState<OverlayEvent | null>(null)
@@ -107,7 +113,9 @@ export default function OverlayClient({ slug }: { slug: string }) {
 
     if (settings.soundUrl) {
       const audio = new Audio(settings.soundUrl)
-      audio.volume = Math.min(1, Math.max(0, settings.volume / 100))
+      const gain = volumeToGain(settings.volume)
+      audio.volume = gain
+      audio.muted = gain === 0
       audioRef.current = audio
       void audio.play().catch(() => {})
     }

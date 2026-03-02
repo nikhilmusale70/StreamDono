@@ -56,6 +56,11 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
   const [uploadingSound, setUploadingSound] = useState(false)
   const [isActive, setIsActive] = useState(initialConfig?.isActive ?? true)
 
+  function volumeToGain(volumePercent: number) {
+    const normalized = Math.min(100, Math.max(0, Number(volumePercent) || 0)) / 100
+    return Math.pow(normalized, 2)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
@@ -309,7 +314,9 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
                   size="sm"
                   onClick={() => {
                     const audio = new Audio(overlaySoundUrl)
-                    audio.volume = Math.min(1, Math.max(0, overlayVolume / 100))
+                    const gain = volumeToGain(overlayVolume)
+                    audio.volume = gain
+                    audio.muted = gain === 0
                     void audio.play().catch(() => setError("Unable to play audio preview"))
                   }}
                 >
