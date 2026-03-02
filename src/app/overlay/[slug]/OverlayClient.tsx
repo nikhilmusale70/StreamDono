@@ -33,6 +33,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
   const afterRef = useRef<number>(Date.now())
   const busyRef = useRef(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const seenIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     // Force transparent page in browser sources.
@@ -60,7 +61,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
           events?: OverlayEvent[]
           settings?: OverlaySettings
         }
-        const events = data.events ?? []
+        const events = (data.events ?? []).filter((e) => !seenIdsRef.current.has(e.id))
         if (data.settings) {
           setSettings({
             animation: data.settings.animation ?? "slide",
@@ -69,11 +70,12 @@ export default function OverlayClient({ slug }: { slug: string }) {
           })
         }
         if (events.length > 0 && !cancelled) {
+          for (const e of events) seenIdsRef.current.add(e.id)
           setQueue((prev) => [...prev, ...events])
           afterRef.current = Math.max(
             ...events.map((e) => e.createdAtMs),
             afterRef.current
-          )
+          ) + 1
         }
       } catch {
         // ignore transient polling errors
