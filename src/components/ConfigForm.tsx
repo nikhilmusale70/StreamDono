@@ -16,6 +16,7 @@ import {
 interface ConfigFormProps {
   initialConfig: {
     donateSlug: string
+    displayName: string | null
     minDonationAmount: number
     alertMessageTemplate: string
     overlayAnimation: "slide" | "pop" | "bounce"
@@ -34,6 +35,9 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
   const [success, setSuccess] = useState("")
   const [donateSlug, setDonateSlug] = useState(
     initialConfig?.donateSlug ?? ""
+  )
+  const [displayName, setDisplayName] = useState(
+    initialConfig?.displayName ?? ""
   )
   const [minDonationAmount, setMinDonationAmount] = useState(
     initialConfig?.minDonationAmount ?? 10
@@ -71,6 +75,7 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           donateSlug: donateSlug || undefined,
+          displayName: displayName.trim() || undefined,
           minDonationAmount,
           alertMessageTemplate,
           overlayAnimation,
@@ -176,6 +181,19 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
             </div>
             <p className="text-xs text-muted-foreground">
               Use only lowercase letters, numbers, hyphens (e.g. nikhil-streams)
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="displayName">Display Name</Label>
+            <Input
+              id="displayName"
+              placeholder="Your streamer name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={80}
+            />
+            <p className="text-xs text-muted-foreground">
+              This name is shown on your public donate page.
             </p>
           </div>
           {donateSlug && (

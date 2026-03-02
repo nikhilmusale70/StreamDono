@@ -6,6 +6,7 @@ import { z } from "zod"
 
 const configSchema = z.object({
   donateSlug: z.string().min(1).max(50).regex(/^[a-z0-9-_]+$/, "Use only lowercase letters, numbers, hyphens"),
+  displayName: z.string().max(80).optional(),
   minDonationAmount: z.number().min(0).max(100000).optional(),
   alertMessageTemplate: z.string().max(500).optional(),
   overlayAnimation: z.enum(["slide", "pop", "bounce"]).optional(),
@@ -34,6 +35,7 @@ export async function GET() {
     config: {
       id: config.id,
       donateSlug: config.donateSlug,
+      displayName: config.displayName,
       minDonationAmount: config.minDonationAmount,
       alertMessageTemplate: config.alertMessageTemplate,
       overlayAnimation: config.overlayAnimation,
@@ -82,6 +84,10 @@ export async function POST(req: Request) {
 
     const updateData: Record<string, unknown> = {
       donateSlug,
+      displayName:
+        data.displayName !== undefined
+          ? (data.displayName.trim() || null)
+          : (existing?.displayName ?? null),
       minDonationAmount: data.minDonationAmount ?? existing?.minDonationAmount ?? 10,
       alertMessageTemplate: data.alertMessageTemplate ?? existing?.alertMessageTemplate ?? "{name} donated ₹{amount}",
       overlayAnimation: data.overlayAnimation ?? existing?.overlayAnimation ?? "slide",
@@ -96,6 +102,7 @@ export async function POST(req: Request) {
       create: {
         userId: session.user.id,
         donateSlug: updateData.donateSlug as string,
+        displayName: updateData.displayName as string | null,
         minDonationAmount: updateData.minDonationAmount as number,
         alertMessageTemplate: updateData.alertMessageTemplate as string,
         overlayAnimation: updateData.overlayAnimation as string,
@@ -106,6 +113,7 @@ export async function POST(req: Request) {
       },
       update: {
         donateSlug: updateData.donateSlug as string,
+        displayName: updateData.displayName as string | null,
         minDonationAmount: updateData.minDonationAmount as number,
         alertMessageTemplate: updateData.alertMessageTemplate as string,
         overlayAnimation: updateData.overlayAnimation as string,
@@ -120,6 +128,7 @@ export async function POST(req: Request) {
       config: {
         id: config.id,
         donateSlug: config.donateSlug,
+        displayName: config.displayName,
         minDonationAmount: config.minDonationAmount,
         alertMessageTemplate: config.alertMessageTemplate,
         overlayAnimation: config.overlayAnimation,

@@ -44,6 +44,7 @@ export default async function ConfigPage() {
           config
             ? {
                 donateSlug: config.donateSlug,
+                displayName: config.displayName,
                 minDonationAmount: config.minDonationAmount,
                 alertMessageTemplate: config.alertMessageTemplate,
                 overlayAnimation: (config.overlayAnimation as "slide" | "pop" | "bounce") ?? "slide",

@@ -28,6 +28,7 @@ model StreamerConfig {
   id                   String   @id @default(cuid())
   userId               String   @unique @map("user_id")
   donateSlug           String   @unique @map("donate_slug")
+  displayName          String?  @map("display_name")
   streamlabsToken      String?  @map("streamlabs_token")
   minDonationAmount    Int      @default(10) @map("min_donation_amount")
   alertMessageTemplate String   @default("{name} donated ₹{amount}") @map("alert_message_template")

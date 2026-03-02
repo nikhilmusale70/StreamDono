@@ -38,6 +38,8 @@ export async function POST(req: Request) {
       )
     }
 
+    const streamerDisplayName = config.displayName?.trim() || config.user.name
+
     if (amount < config.minDonationAmount) {
       return NextResponse.json(
         { error: `Minimum donation is ₹${config.minDonationAmount}` },
@@ -90,7 +92,7 @@ export async function POST(req: Request) {
       keyId,
       amount: amountPaise,
       currency: "INR",
-      streamerName: config.user.name,
+      streamerName: streamerDisplayName,
     })
   } catch (e) {
     if (e instanceof z.ZodError) {
