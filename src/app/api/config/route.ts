@@ -10,6 +10,7 @@ const configSchema = z.object({
   alertMessageTemplate: z.string().max(500).optional(),
   overlayAnimation: z.enum(["slide", "pop", "bounce"]).optional(),
   overlaySoundUrl: z.string().max(1200000).nullable().optional(),
+  overlayDurationMs: z.number().min(1500).max(20000).optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -36,6 +37,7 @@ export async function GET() {
       alertMessageTemplate: config.alertMessageTemplate,
       overlayAnimation: config.overlayAnimation,
       overlaySoundUrl: config.overlaySoundUrl,
+      overlayDurationMs: config.overlayDurationMs,
       isActive: config.isActive,
     },
   })
@@ -82,6 +84,7 @@ export async function POST(req: Request) {
       alertMessageTemplate: data.alertMessageTemplate ?? existing?.alertMessageTemplate ?? "{name} donated ₹{amount}",
       overlayAnimation: data.overlayAnimation ?? existing?.overlayAnimation ?? "slide",
       overlaySoundUrl: data.overlaySoundUrl !== undefined ? data.overlaySoundUrl : (existing?.overlaySoundUrl ?? null),
+      overlayDurationMs: data.overlayDurationMs ?? existing?.overlayDurationMs ?? 5000,
       isActive: data.isActive ?? existing?.isActive ?? true,
     }
 
@@ -94,6 +97,7 @@ export async function POST(req: Request) {
         alertMessageTemplate: updateData.alertMessageTemplate as string,
         overlayAnimation: updateData.overlayAnimation as string,
         overlaySoundUrl: updateData.overlaySoundUrl as string | null,
+        overlayDurationMs: updateData.overlayDurationMs as number,
         isActive: updateData.isActive as boolean,
       },
       update: {
@@ -102,6 +106,7 @@ export async function POST(req: Request) {
         alertMessageTemplate: updateData.alertMessageTemplate as string,
         overlayAnimation: updateData.overlayAnimation as string,
         overlaySoundUrl: updateData.overlaySoundUrl as string | null,
+        overlayDurationMs: updateData.overlayDurationMs as number,
         isActive: updateData.isActive as boolean,
       },
     })
@@ -114,6 +119,7 @@ export async function POST(req: Request) {
         alertMessageTemplate: config.alertMessageTemplate,
         overlayAnimation: config.overlayAnimation,
         overlaySoundUrl: config.overlaySoundUrl,
+        overlayDurationMs: config.overlayDurationMs,
         isActive: config.isActive,
       },
     })

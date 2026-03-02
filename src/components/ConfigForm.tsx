@@ -20,6 +20,7 @@ interface ConfigFormProps {
     alertMessageTemplate: string
     overlayAnimation: "slide" | "pop" | "bounce"
     overlaySoundUrl: string | null
+    overlayDurationMs: number
     isActive: boolean
   } | null
   donateUrl: string
@@ -45,6 +46,9 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
   const [overlaySoundUrl, setOverlaySoundUrl] = useState<string | null>(
     initialConfig?.overlaySoundUrl ?? null
   )
+  const [overlayDurationMs, setOverlayDurationMs] = useState<number>(
+    initialConfig?.overlayDurationMs ?? 5000
+  )
   const [uploadingSound, setUploadingSound] = useState(false)
   const [isActive, setIsActive] = useState(initialConfig?.isActive ?? true)
 
@@ -63,6 +67,7 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
           alertMessageTemplate,
           overlayAnimation,
           overlaySoundUrl,
+          overlayDurationMs,
           isActive,
         }),
       })
@@ -220,6 +225,22 @@ export function ConfigForm({ initialConfig, donateUrl }: ConfigFormProps) {
               <option value="pop">Pop In</option>
               <option value="bounce">Bounce</option>
             </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="duration">Alert Duration (seconds)</Label>
+            <Input
+              id="duration"
+              type="number"
+              min={1.5}
+              max={20}
+              step={0.5}
+              value={(overlayDurationMs / 1000).toString()}
+              onChange={(e) => {
+                const seconds = Number(e.target.value)
+                if (!Number.isFinite(seconds)) return
+                setOverlayDurationMs(Math.round(Math.min(20, Math.max(1.5, seconds)) * 1000))
+              }}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="soundUpload">Alert Sound (optional)</Label>

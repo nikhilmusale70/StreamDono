@@ -14,6 +14,7 @@ type OverlayEvent = {
 type OverlaySettings = {
   animation: "slide" | "pop" | "bounce"
   soundUrl: string | null
+  durationMs: number
 }
 
 function formatAmount(paise: number) {
@@ -27,6 +28,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
   const [settings, setSettings] = useState<OverlaySettings>({
     animation: "slide",
     soundUrl: null,
+    durationMs: 5000,
   })
   const afterRef = useRef<number>(Date.now())
   const busyRef = useRef(false)
@@ -63,6 +65,7 @@ export default function OverlayClient({ slug }: { slug: string }) {
           setSettings({
             animation: data.settings.animation ?? "slide",
             soundUrl: data.settings.soundUrl ?? null,
+            durationMs: data.settings.durationMs ?? 5000,
           })
         }
         if (events.length > 0 && !cancelled) {
@@ -100,11 +103,12 @@ export default function OverlayClient({ slug }: { slug: string }) {
       void audio.play().catch(() => {})
     }
 
-    const hideTimer = setTimeout(() => setVisible(false), 5000)
+    const duration = Math.max(1500, settings.durationMs ?? 5000)
+    const hideTimer = setTimeout(() => setVisible(false), duration)
     const clearTimer = setTimeout(() => {
       setCurrent(null)
       busyRef.current = false
-    }, 5700)
+    }, duration + 700)
 
     return () => {
       clearTimeout(hideTimer)

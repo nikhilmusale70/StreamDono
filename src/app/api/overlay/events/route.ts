@@ -11,6 +11,12 @@ type OverlayEvent = {
   isTest: boolean
 }
 
+type OverlaySettings = {
+  animation: "slide" | "pop" | "bounce"
+  soundUrl: string | null
+  durationMs: number
+}
+
 export async function GET(req: NextRequest) {
   const slug = req.nextUrl.searchParams.get("slug")?.trim().toLowerCase()
   const afterMs = Number(req.nextUrl.searchParams.get("after") ?? "0")
@@ -30,6 +36,7 @@ export async function GET(req: NextRequest) {
       isActive: true,
       overlayAnimation: true,
       overlaySoundUrl: true,
+      overlayDurationMs: true,
     },
   })
   if (!config) {
@@ -42,6 +49,7 @@ export async function GET(req: NextRequest) {
       settings: {
         animation: config.overlayAnimation ?? "slide",
         soundUrl: config.overlaySoundUrl ?? null,
+        durationMs: config.overlayDurationMs ?? 5000,
       },
     })
   }
@@ -94,6 +102,7 @@ export async function GET(req: NextRequest) {
     settings: {
       animation: config.overlayAnimation ?? "slide",
       soundUrl: config.overlaySoundUrl ?? null,
+      durationMs: config.overlayDurationMs ?? 5000,
     },
   })
 }

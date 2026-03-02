@@ -39,6 +39,7 @@ export default async function ConfigPage() {
                 alertMessageTemplate: config.alertMessageTemplate,
                 overlayAnimation: (config.overlayAnimation as "slide" | "pop" | "bounce") ?? "slide",
                 overlaySoundUrl: config.overlaySoundUrl,
+                overlayDurationMs: config.overlayDurationMs ?? 5000,
                 isActive: config.isActive,
               }
             : null
